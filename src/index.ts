@@ -1,46 +1,38 @@
-import { createServer } from "http";
 import express from "express";
+import bodyParser from 'body-parser';
 import { ApolloServer, gql } from "apollo-server-express";
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import typeDefs from './schema';
+import resolvers from './resolvers';
+import cors from 'cors';
 
-// 1
+
+const schema = makeExecutableSchema({
+  typeDefs,
+  resolvers,
+});
+
+const corsOptions = {
+  origin: '*',
+  credentials: true,
+  optionSuccessStatus: 200,
+}
+
+const server = new ApolloServer({ schema });
+
 const startServer = async () => {
+  await server.start();
+  const app = express();
 
-  // 2
-  const app = express()
-  const httpServer = createServer(app)
+  app.use(cors(corsOptions));
+  app.use(bodyParser.json());
 
-  // 3
-  const typeDefs = gql`
-    type Query {
-      hello: String
-    }
-  `;
 
-  // 4
-  const resolvers = {
-    Query: {
-      hello: () => 'Hello world!',
-    },
-  };
+  server.applyMiddleware({ app, path: '/api' });
 
-  // 5
-  const apolloServer = new ApolloServer({
-    typeDefs,
-    resolvers,
-  })
 
-  // 6
-  await apolloServer.start()
-
-  // 7
-  apolloServer.applyMiddleware({
-      app,
-      path: '/api'
-  })
-
-  // 8
-  httpServer.listen({ port: process.env.PORT || 4000 }, () =>
-    console.log(`Server listening on localhost:4000${apolloServer.graphqlPath}`)
+  app.listen({ port: process.env.PORT || 4000 }, () =>
+    console.log(`Server listening on localhost:4000${server.graphqlPath}`)
   )
 }
 
